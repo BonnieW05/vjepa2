@@ -23,6 +23,6 @@ if __name__ == "__main__":
         version=VERSION,
         description=DESCRIPTION,
         url=URL,
-        python_requires=">=3.11",
+        python_requires=">=3.10", # originally 3.11
         install_requires=get_requirements(),
     )

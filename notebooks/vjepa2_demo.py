@@ -10,7 +10,7 @@ import subprocess
 import numpy as np
 import torch
 import torch.nn.functional as F
-from decord import VideoReader
+import cv2
 from transformers import AutoModel, AutoVideoProcessor
 
 import src.datasets.utils.video.transforms as video_transforms
@@ -55,13 +55,47 @@ def build_pt_video_transform(img_size):
     return eval_transform
 
 
-def get_video():
-    vr = VideoReader("sample_video.mp4")
-    # choosing some frames here, you can define more complex sampling strategy
-    frame_idx = np.arange(0, 128, 2)
-    video = vr.get_batch(frame_idx).asnumpy()
-    return video
+# def get_video():
+#     vr = VideoReader("sample_video.mp4")
+#     # choosing some frames here, you can define more complex sampling strategy
+#     frame_idx = np.arange(0, 128, 2)
+#     video = vr.get_batch(frame_idx).asnumpy()
+#     return video
 
+def get_video():
+    """使用OpenCV读取视频"""
+    cap = cv2.VideoCapture("sample_video.mp4")
+    
+    # 获取视频信息
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    print(f"Total frames in video: {total_frames}")
+    
+    frames = []
+    frame_idx = np.arange(0, min(128, total_frames), 2)  # 防止超出视频长度
+    
+    current_frame = 0
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+            
+        if current_frame in frame_idx:
+            # OpenCV读取的是BGR，需要转换为RGB
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frames.append(frame_rgb)
+            
+        current_frame += 1
+        
+        # 如果已经读取了所有需要的帧，提前退出
+        if len(frames) >= len(frame_idx):
+            break
+    
+    cap.release()
+    
+    # 转换为numpy数组 (T, H, W, C)
+    video = np.stack(frames, axis=0)
+    print(f"Video shape: {video.shape}")
+    return video
 
 def forward_vjepa_video(model_hf, model_pt, hf_transform, pt_transform):
     # Run a sample inference with VJEPA
